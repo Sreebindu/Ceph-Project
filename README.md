@@ -1,7 +1,5 @@
 # Ceph-Project
-reviewed both your original deploy.sh and the full terminal history. The biggest reliability problem in the old script was that it deleted/recreated the three backing images and wiped the NBD devices even on reruns, while also continuing after some failures. Your terminal history also shows the successful fresh-rebuild cleanup sequence: delete the kind cluster, remove the loop-disk directory, clean Docker/kind state, verify the host, then rebuild.
-
-I created these three outputs:
+The biggest reliability problem in the script was that it deleted/recreated the three backing images and wiped the NBD devices even on reruns, while also continuing after some failures. Terminal history also shows the successful fresh-rebuild cleanup sequence: delete the kind cluster, remove the loop-disk directory, clean Docker/kind state, verify the host, then rebuild.
 
 Fixed deploy script — supports normal non-destructive deploy, --reinstall, --cleanup-only, and --bootstrap.
 Ceph installation/uninstallation runbook — covers installation, targeted reinstall, full host cleanup, dashboard, RGW/S3, OSD troubleshooting, and operational checks.
@@ -26,8 +24,6 @@ bash deploy_fixed.sh --bootstrap
 --reinstall and --cleanup-only are intentionally destructive to /var/lib/rook-loop-disks, so use them only when you want to discard the current Ceph data. The separate deep Docker/containerd purge you performed is documented in the runbook but is deliberately not part of normal Ceph reinstallation.
 
 deploy_fixed.sh
-Code
 Ceph_Rook_Kind_Installation_Uninstallation_Guide.docx
-Document
 Ceph_Admin_Commands.md
-Document
+
