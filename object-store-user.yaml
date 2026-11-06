@@ -1,0 +1,16 @@
+# Creates an S3-style access key / secret key pair for the RGW store.
+# After applying, Rook writes credentials into a Secret named
+# rook-ceph-object-user-rgw-store-s3-user in the rook-ceph namespace.
+
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStoreUser
+metadata:
+  name: s3-user
+  namespace: rook-ceph
+spec:
+  store: rgw-store
+  displayName: "s3-user"
+  # quotas:                     # optional: cap this user's usage
+  #   maxSize: "50G"
+  #   maxBuckets: 10
+  #   maxObjects: 1000000

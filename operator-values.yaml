@@ -1,0 +1,31 @@
+# Helm chart: rook-ceph (the operator)
+# Install with:
+#   helm install rook-ceph rook-release/rook-ceph \
+#     --namespace rook-ceph --create-namespace \
+#     -f 01-operator-values.yaml
+
+# We only need RGW (object storage) -> disable CephFS and RBD CSI drivers
+# to cut down on pods/daemonsets running on every node.
+csi:
+  enableRbdDriver: false      # not using RBD (block) volumes
+  enableCephfsDriver: false   # not using CephFS
+  enableNFSSnapshotter: false
+
+# Skip the monitoring stack unless you already run Prometheus and want
+# Ceph metrics scraped into it.
+monitoring:
+  enabled: false
+
+# Keep operator resource use small; bump if you see it OOM on a busy cluster.
+resources:
+  limits:
+    cpu: "500m"
+    memory: "256Mi"
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+
+# Restrict operator to watch only this namespace (simpler, single-cluster setup).
+currentNamespaceOnly: true
+
+logLevel: "INFO"

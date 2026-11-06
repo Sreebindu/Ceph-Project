@@ -1,0 +1,23 @@
+# Exposes the Ceph Dashboard via NodePort for kind clusters.
+# Access via: https://<kind-node-ip>:30700
+# Get node IP: kubectl get nodes -o wide
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: rook-ceph-dashboard-lb
+  namespace: rook-ceph
+  labels:
+    app: rook-ceph-mgr
+    rook_cluster: rook-ceph
+spec:
+  type: NodePort
+  ports:
+    - name: dashboard
+      port: 7000
+      targetPort: 8443
+      nodePort: 30700
+      protocol: TCP
+  selector:
+    app: rook-ceph-mgr
+    rook_cluster: rook-ceph

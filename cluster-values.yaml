@@ -1,0 +1,115 @@
+# Helm chart: rook-ceph-cluster (the actual Ceph cluster + RGW + dashboard)
+# Install with:
+#   helm install rook-ceph-cluster rook-release/rook-ceph-cluster \
+#     --namespace rook-ceph \
+#     -f 02-cluster-values.yaml
+#
+# IMPORTANT: edit the `storage.nodes` section below with YOUR real node
+# names and device names (or switch to the PVC-based block at the bottom).
+# This is what prevents Rook from grabbing every disk on every node.
+
+operatorNamespace: rook-ceph
+
+cephClusterSpec:
+  mon:
+    count: 3
+    allowMultiplePerNode: false   # spread mons across 3 different nodes
+
+  mgr:
+    count: 1
+    modules:
+      - name: pg_autoscaler
+        enabled: true
+
+  # Native Ceph Dashboard = your UI. No extra component needed.
+  dashboard:
+    enabled: true
+    ssl: true
+
+  # Skip metrics stack unless you already run Prometheus.
+  monitoring:
+    enabled: false
+
+  # No CephFS / RBD needed for RGW-only -> don't enable crash collector
+  # extras beyond default; keep it minimal.
+  crashCollector:
+    disable: false
+
+  # ---- Storage: explicit device list (Option A) ----
+  # Replace node names/devices with your real ones.
+  # Run `kubectl get nodes` and check available disks with
+  # `lsblk` on each node first.
+  # kind nodes: .img files attached as NBD devices on the host (TYPE=disk,
+  # Rook accepts them) and device nodes injected into each worker container.
+  storage:
+    useAllNodes: false
+    useAllDevices: false
+    nodes:
+      - name: "rook-ceph-worker"
+        devices:
+          - name: "/dev/nbd0"
+      - name: "rook-ceph-worker2"
+        devices:
+          - name: "/dev/nbd1"
+      - name: "rook-ceph-worker3"
+        devices:
+          - name: "/dev/nbd2"
+
+  # ---- Storage: PVC-based (Option B) ----
+  # If you'd rather let Rook provision OSDs as PVCs against a StorageClass
+  # (cleaner in cloud/k8s environments with dynamic block storage), comment
+  # out the `storage:` block above and uncomment this instead:
+  #
+  # storage:
+  #   storageClassDeviceSets:
+  #     - name: osd-set
+  #       count: 3
+  #       portable: false
+  #       volumeClaimTemplates:
+  #         - metadata:
+  #             name: data
+  #           spec:
+  #             resources:
+  #               requests:
+  #                 storage: 100Gi          # <- hard cap per OSD, set deliberately
+  #             storageClassName: "your-block-storage-class"
+  #             volumeMode: Block
+  #             accessModes:
+  #               - ReadWriteOnce
+
+  resources:
+    mgr:
+      limits: {cpu: "1000m", memory: "1Gi"}
+      requests: {cpu: "500m", memory: "512Mi"}
+    mon:
+      limits: {cpu: "1000m", memory: "1Gi"}
+      requests: {cpu: "500m", memory: "512Mi"}
+    osd:
+      limits: {cpu: "2000m", memory: "4Gi"}
+      requests: {cpu: "500m", memory: "2Gi"}
+
+# Don't create CephFS or a CephBlockPool - RGW only.
+cephFileSystems: []
+cephBlockPools: []
+
+# The RGW / S3 object store.
+cephObjectStores:
+  - name: rgw-store
+    spec:
+      metadataPool:
+        replicated:
+          size: 2          # lower overhead than default 3; raise if you need more durability
+        failureDomain: host
+      dataPool:
+        replicated:
+          size: 2
+        failureDomain: host
+      preservePoolsOnDelete: false
+      gateway:
+        port: 80
+        instances: 1        # bump to 2+ for HA once you have enough nodes
+        resources:
+          limits: {cpu: "1000m", memory: "1Gi"}
+          requests: {cpu: "250m", memory: "256Mi"}
+    storageClass:
+      enabled: false        # we're not consuming buckets via k8s StorageClass/COSI here
